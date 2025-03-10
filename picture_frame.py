@@ -23,10 +23,15 @@ with BuildPart() as edge:
         add(edge_plate)
     extrude(amount=holding_height, mode=Mode.SUBTRACT)
     long_face = edge.faces().sort_by(Axis.X)[-1]
+    long_face_plane = Plane(long_face)
     edge_vtx = long_face.vertices().group_by(Axis.Z)[-1].sort_by(Axis.Y)[0]
-    print(edge_vtx)
     
-    with BuildSketch(long_face) as picture_notch:
+    print(edge_vtx)
+    print(long_face_plane.to_local_coords(edge_vtx))
+    #TODO: Understand https://build123d.readthedocs.io/en/latest/build_sketch.html#sketching-on-other-planes
+    # and last three questions of https://build123d.readthedocs.io/en/latest/tips.html
+    with BuildSketch(long_face_plane) as picture_notch:
+        print(long_face_plane.to_local_coords(edge_vtx))
         with Locations((edge_vtx.X, edge_vtx.Y)):
             Circle(10.0)
             with BuildLine() as pnline:
@@ -54,7 +59,7 @@ with BuildPart() as frame:
 
 
 
-show(edge)
+#show(edge)
 #show(picture_notch)
-#show_all()
+show_all()
 #export_step(frame.part, "picture_frame.step")
