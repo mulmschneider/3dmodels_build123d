@@ -22,19 +22,18 @@ with BuildPart() as edge:
     with Locations((-holding_width, holding_width, frame_height)):
         add(edge_plate)
     extrude(amount=holding_height, mode=Mode.SUBTRACT)
-    hypotenuse = edge.faces().sort_by(Axis.Y)[-1]
-    inner_edge_short=hypotenuse.vertices().group_by(Axis.Z)[-1][1]
-    hypo_plane= Plane(hypotenuse)
+    long_face = edge.faces().sort_by(Axis.X)[-1]
+    edge_vtx = long_face.vertices().group_by(Axis.Z)[-1].sort_by(Axis.Y)[0]
+    print(edge_vtx)
     
-    with Locations(hypo_plane):
-        with Locations(hypo_plane.to_local_coords(inner_edge_short)):
-            Box(1,1,1, align=(Align.MIN, Align.MAX, Align.MAX), mode=Mode.SUBTRACT )
-    with BuildSketch() as picture_notch:
-        with BuildLine() as pnline:
-            #Polyline([(inner_edge_short.Y,inner_edge_short.Z+5), (inner_edge_short.Y+5,inner_edge_short.Z), (inner_edge_short.Y,inner_edge_short.Z), (inner_edge_short.Y,inner_edge_short.Z+5)])
-            Polyline([(0,5), (5,0), (0,0), (0,5)])
-        make_face()
-    extrude(amount=-2)
+    with BuildSketch(long_face) as picture_notch:
+        with Locations((edge_vtx.X, edge_vtx.Y)):
+            Circle(10.0)
+            with BuildLine() as pnline:
+        #Polyline([(inner_edge_short.Y,inner_edge_short.Z+5), (inner_edge_short.Y+5,inner_edge_short.Z), (inner_edge_short.Y,inner_edge_short.Z), (inner_edge_short.Y,inner_edge_short.Z+5)])
+                p = Polyline([(0,5), (5,0), (0,0), (-0,5)])
+            make_face()
+    extrude(amount=-2, mode=Mode.SUBTRACT)
 
     
   
