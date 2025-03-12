@@ -2,15 +2,21 @@ from build123d import *
 from ocp_vscode import *
 from multiconnect.multiconnect import Multiconnect
 
+edge_width = 27
+edge_length = 40
 edge_pts= [
     (0,0),
-    (27,0),
-    (27,40),
+    (edge_width,0),
+    (edge_width,edge_length),
     (0,0)
 ]
+
 frame_height=5.5
 holding_height= 5
 holding_width = 6
+
+with BuildLine() as notch_line:
+        p = Polyline([(holding_width,0), (1.5,-holding_height), (holding_width, -holding_height), (holding_width,0)])
 
 with BuildPart() as edge:
     with BuildSketch() as edge_plate:
@@ -22,24 +28,26 @@ with BuildPart() as edge:
     with Locations((-holding_width, holding_width, frame_height)):
         add(edge_plate)
     extrude(amount=holding_height, mode=Mode.SUBTRACT)
-    long_face = edge.faces().sort_by(Axis.X)[-1]
-    long_face_plane = Plane(long_face)
-    edge_vtx = long_face.vertices().group_by(Axis.Z)[-1].sort_by(Axis.Y)[0]
-    
-    print(edge_vtx)
-    print(long_face_plane.to_local_coords(edge_vtx))
-    #TODO: Understand https://build123d.readthedocs.io/en/latest/build_sketch.html#sketching-on-other-planes
-    # and last three questions of https://build123d.readthedocs.io/en/latest/tips.html
-    with BuildSketch(long_face_plane) as picture_notch:
-        print(long_face_plane.to_local_coords(edge_vtx))
-        with Locations((edge_vtx.X, edge_vtx.Y)):
-            Circle(10.0)
-            with BuildLine() as pnline:
-        #Polyline([(inner_edge_short.Y,inner_edge_short.Z+5), (inner_edge_short.Y+5,inner_edge_short.Z), (inner_edge_short.Y,inner_edge_short.Z), (inner_edge_short.Y,inner_edge_short.Z+5)])
-                p = Polyline([(0,5), (5,0), (0,0), (-0,5)])
-            make_face()
-    extrude(amount=-2, mode=Mode.SUBTRACT)
 
+    long_face = edge.faces().sort_by(Axis.X)[-1]
+    notch_start_edge = long_face.vertices().group_by(Axis.Z)[-1].sort_by(Axis.Y)[0]
+    long_face_plane = Plane(origin=notch_start_edge + (-6,0), x_dir=(0,1,0), z_dir=long_face.normal_at())
+    
+    #TODO: strange thingy in the corner. Probably need to design a seperate shape (via intersect) 
+    # just for the corner that we subtract here?
+    with BuildSketch(long_face_plane) as picture_notch:
+        with BuildLine() as lfline:
+            add(notch_line)
+        make_face()
+    extrude(amount=-(edge_width-1.5), mode=Mode.SUBTRACT)
+
+    short_face = edge.faces().sort_by(Axis.Y)[0]
+    short_face_plane = Plane(origin=notch_start_edge + (0,1.5), x_dir=(-1,0,0), z_dir=-short_face.normal_at())
+    with BuildSketch(short_face_plane) as picture_notch:
+        with BuildLine() as sfline:
+            add(notch_line)
+        make_face()
+    extrude(amount=(edge_length-1.5), mode=Mode.SUBTRACT)
     
   
 
@@ -49,17 +57,41 @@ cross_length = 100
 cross_width = 25
 
 with BuildPart() as frame:
-    Box(100, 25, 5.5)
-    Box(25, 100, 5.5)
-    with Locations(frame.faces().sort_by(Axis.Z)[0]):
+    Box(100, 25, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
+    Box(25, 100, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
+    top_face = frame.faces().sort_by(Axis.Z)[0]
+    cross_conn_vtx = frame.edges().group_by(Axis.X)[-1].sort_by(Axis.Y)[0].vertices()[0]
+    #TODO: This needs to auto calculate depending on picture size. Probably by using the outer face (via align?) and subtracting
+    # the disctance to the inner notch edge
+    with Locations((87,-65,0)):
+        e = add(edge)
+        mirror(e, about=Plane.XZ)
+        e2 = mirror(e, about=Plane.YZ)
+        mirror(e2, about=Plane.XZ)
+    edge_face = e.faces().sort_by_distance((0,0))[0]
+    edge_conn = edge_face.center()
+    
+    connector_width = 10
+    with BuildLine() as cline:
+        #TODO: Don't start at (0,0) but at the corner of the cross minus connector width
+        l = Line((cross_conn_vtx.X-connector_width/2,cross_conn_vtx.Y), (edge_conn.X,edge_conn.Y))
+    #TODO: Fix this manual subtraction. shouldn't be necessary.
+    with BuildSketch(Plane(origin=edge_face.center() - (0,0,1), z_dir=edge_face.normal_at())) as crect:
+        r = Rectangle(connector_width, frame_height)
+    connector = sweep()
+    mirror(connector, about=Plane.XZ)
+    c2 = mirror(connector, about=Plane.YZ)
+    mirror(c2, about=Plane.XZ)
+
+
+    with Locations(top_face):
         Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,0))
         Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,90))
 
 
 
 
-
-#show(edge)
+show(frame)
 #show(picture_notch)
-show_all()
-#export_step(frame.part, "picture_frame.step")
+#show_all()
+export_step(frame.part, "picture_frame.step")
