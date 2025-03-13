@@ -74,7 +74,7 @@ with BuildPart() as frame:
     connector_width = 10
     with BuildLine() as cline:
         #TODO: Don't start at (0,0) but at the corner of the cross minus connector width
-        l = Line((cross_conn_vtx.X-connector_width/2,cross_conn_vtx.Y), (edge_conn.X,edge_conn.Y))
+        l = Line((cross_conn_vtx.X-connector_width/2-5,cross_conn_vtx.Y+5), (edge_conn.X,edge_conn.Y))
     #TODO: Fix this manual subtraction. shouldn't be necessary.
     with BuildSketch(Plane(origin=edge_face.center() - (0,0,1), z_dir=edge_face.normal_at())) as crect:
         r = Rectangle(connector_width, frame_height)
