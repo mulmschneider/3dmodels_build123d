@@ -2,12 +2,20 @@ from build123d import *
 from ocp_vscode import *
 from multiconnect.multiconnect import Multiconnect
 
-edge_width = 27
-edge_length = 40
+picture_width = 110
+picture_length = 160
+picture_tolerance = 3
+
+picture_width += picture_tolerance
+picture_length += picture_tolerance
+
+
+edge_width = 40
+edge_length = 27
 edge_pts= [
     (0,0),
-    (edge_width,0),
-    (edge_width,edge_length),
+    (edge_length,0),
+    (edge_length,edge_width),
     (0,0)
 ]
 
@@ -39,7 +47,7 @@ with BuildPart() as edge:
         with BuildLine() as lfline:
             add(notch_line)
         make_face()
-    extrude(amount=-(edge_width-1.5), mode=Mode.SUBTRACT)
+    extrude(amount=-(edge_length-1.5), mode=Mode.SUBTRACT)
 
     short_face = edge.faces().sort_by(Axis.Y)[0]
     short_face_plane = Plane(origin=notch_start_edge + (0,1.5), x_dir=(-1,0,0), z_dir=-short_face.normal_at())
@@ -47,7 +55,7 @@ with BuildPart() as edge:
         with BuildLine() as sfline:
             add(notch_line)
         make_face()
-    extrude(amount=(edge_length-1.5), mode=Mode.SUBTRACT)
+    extrude(amount=(edge_width-1.5), mode=Mode.SUBTRACT)
     
   
 
@@ -56,6 +64,11 @@ with BuildPart() as edge:
 cross_length = 100
 cross_width = 25
 
+#TODO: Remove hardcoded 1.5 (aka notch_wall)
+distance_to_edge_x=picture_length/2 - (edge_length-1.5)
+distance_to_edge_y=picture_width/2 + 1.5
+print(distance_to_edge_x)
+print(distance_to_edge_y)
 with BuildPart() as frame:
     Box(100, 25, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
     Box(25, 100, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
@@ -63,7 +76,7 @@ with BuildPart() as frame:
     cross_conn_vtx = frame.edges().group_by(Axis.X)[-1].sort_by(Axis.Y)[0].vertices()[0]
     #TODO: This needs to auto calculate depending on picture size. Probably by using the outer face (via align?) and subtracting
     # the disctance to the inner notch edge
-    with Locations((87,-65,0)):
+    with Locations((distance_to_edge_x,-distance_to_edge_y)):
         e = add(edge)
         mirror(e, about=Plane.XZ)
         e2 = mirror(e, about=Plane.YZ)
@@ -73,7 +86,7 @@ with BuildPart() as frame:
     
     connector_width = 10
     with BuildLine() as cline:
-        #TODO: Don't start at (0,0) but at the corner of the cross minus connector width
+        #Connect to the edge of the cross but move point 5 "inwards" to take care of slant.
         l = Line((cross_conn_vtx.X-connector_width/2-5,cross_conn_vtx.Y+5), (edge_conn.X,edge_conn.Y))
     #TODO: Fix this manual subtraction. shouldn't be necessary.
     with BuildSketch(Plane(origin=edge_face.center() - (0,0,1), z_dir=edge_face.normal_at())) as crect:
