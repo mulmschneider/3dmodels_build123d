@@ -10,12 +10,14 @@ picture_width += picture_tolerance
 picture_length += picture_tolerance
 
 
-edge_width = 40
-edge_length = 27
+edge_width = 27
+edge_length = 40
 edge_pts= [
     (0,0),
     (edge_length,0),
     (edge_length,edge_width),
+ #   (edge_length-6,edge_width),
+ #   (0,6),
     (0,0)
 ]
 
@@ -81,13 +83,14 @@ with BuildPart() as frame:
         mirror(e, about=Plane.XZ)
         e2 = mirror(e, about=Plane.YZ)
         mirror(e2, about=Plane.XZ)
+    #TODO: find the face properly, instead of selection magic 2
     edge_face = e.faces().sort_by_distance((0,0))[0]
     edge_conn = edge_face.center()
     
     connector_width = 10
     with BuildLine() as cline:
         #Connect to the edge of the cross but move point 5 "inwards" to take care of slant.
-        l = Line((cross_conn_vtx.X-connector_width/2-5,cross_conn_vtx.Y+5), (edge_conn.X,edge_conn.Y))
+        l = Line((cross_conn_vtx.X-connector_width/2-2.5,cross_conn_vtx.Y+5), (edge_conn.X,edge_conn.Y))
     #TODO: Fix this manual subtraction. shouldn't be necessary.
     with BuildSketch(Plane(origin=edge_face.center() - (0,0,1), z_dir=edge_face.normal_at())) as crect:
         r = Rectangle(connector_width, frame_height)
@@ -105,6 +108,7 @@ with BuildPart() as frame:
 
 
 show(frame)
+#show(edge_plate)
 #show(picture_notch)
 #show_all()
 export_step(frame.part, "picture_frame.step")
