@@ -11,7 +11,7 @@ picture_length += picture_tolerance
 
 
 edge_width = 27
-edge_length = 40
+edge_length = 27
 edge_pts= [
     (0,0),
     (edge_length,0),
@@ -72,19 +72,36 @@ distance_to_edge_y=picture_width/2 + 1.5
 print(distance_to_edge_x)
 print(distance_to_edge_y)
 with BuildPart() as frame:
-    Box(100, 25, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
-    Box(25, 100, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
+
+# === Create Edges ====
+
+    #TODO: Refactor so that we start with ell, so that all coords are positive (making alignment etc more consistent)
+    with Locations((distance_to_edge_x,-distance_to_edge_y)):
+        elr = add(edge)
+        eur= mirror(elr, about=Plane.XZ)
+        ell = mirror(elr, about=Plane.YZ)
+        eul = mirror(ell, about=Plane.XZ)
+    
+# === Create Multiconnect "Cross" ====    
+
+    long_cross_starting_vtx = ell.vertices().group_by(Axis.Y)[-1].group_by(Axis.Z)[0].sort_by(Axis.X)[0]
+    short_cross_starting_vtx = eur.vertices().group_by(Axis.Y)[-1].group_by(Axis.Z)[0].sort_by(Axis.X)[0]
+    short_cross_starting_vtx += (0,-8,0)
+    with Locations(long_cross_starting_vtx):
+        Box(100, 23, frame_height, align=((Align.MIN, Align.MIN, Align.MIN)))
+        Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,0), align=((Align.MIN, Align.MIN, Align.MIN)))
+    with Locations(short_cross_starting_vtx):
+        b = Box(23, 60, frame_height, align=((Align.MAX, Align.MAX, Align.MIN)))
+        short_cross_bottom = b.faces().sort_by(Axis.Z)[0]
+    with Locations(Plane(short_cross_bottom, x_dir=(0,1,0), z_dir=short_cross_bottom.normal_at())):
+        m = Multiconnect(100, mode=Mode.SUBTRACT)
     top_face = frame.faces().sort_by(Axis.Z)[0]
     cross_conn_vtx = frame.edges().group_by(Axis.X)[-1].sort_by(Axis.Y)[0].vertices()[0]
-    #TODO: This needs to auto calculate depending on picture size. Probably by using the outer face (via align?) and subtracting
-    # the disctance to the inner notch edge
-    with Locations((distance_to_edge_x,-distance_to_edge_y)):
-        e = add(edge)
-        mirror(e, about=Plane.XZ)
-        e2 = mirror(e, about=Plane.YZ)
-        mirror(e2, about=Plane.XZ)
+
+# === Connect Edges to "Cross" ====
+
     #TODO: find the face properly, instead of selection magic 2
-    edge_face = e.faces().sort_by_distance((0,0))[0]
+    edge_face = elr.faces().sort_by_distance((0,0))[0]
     edge_conn = edge_face.center()
     
     connector_width = 10
@@ -100,14 +117,14 @@ with BuildPart() as frame:
     mirror(c2, about=Plane.XZ)
 
 
-    with Locations(top_face):
-        Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,0))
-        Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,90))
+    #with Locations(top_face):
+        
+        
 
 
 
 
-show(frame)
+show(frame, short_cross_starting_vtx)
 #show(edge_plate)
 #show(picture_notch)
 #show_all()

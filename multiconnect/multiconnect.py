@@ -36,9 +36,8 @@ class Multiconnect(BasePartObject):
                     Polyline(pts)
                     mirror(ex8_ln.line, about=Plane.XZ)
                 make_face()
-            extrude(amount=length, both=True)
+            extrude(amount=length/2, both=True)
         multiconnect_bar.part = multiconnect_bar.part.rotate(Axis.X, 180)
-
         super().__init__(
             part=multiconnect_bar.part, rotation=rotation, align=align, mode=mode
         )
