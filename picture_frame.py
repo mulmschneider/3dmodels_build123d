@@ -9,6 +9,8 @@ picture_tolerance = 3
 picture_width += picture_tolerance
 picture_length += picture_tolerance
 
+horizontal_mounting = False
+vertical_mounting = True
 
 edge_width = 27
 edge_length = 40
@@ -72,8 +74,10 @@ distance_to_edge_y=picture_width/2 + 1.5
 print(distance_to_edge_x)
 print(distance_to_edge_y)
 with BuildPart() as frame:
-    Box(100, 25, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
-    Box(25, 100, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
+    if(horizontal_mounting):
+        Box(100, 25, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
+    if(vertical_mounting):
+        vmount_box = Box(25, 100, frame_height, align=((Align.CENTER, Align.CENTER, Align.MIN)))
     top_face = frame.faces().sort_by(Axis.Z)[0]
     cross_conn_vtx = frame.edges().group_by(Axis.X)[-1].sort_by(Axis.Y)[0].vertices()[0]
     #TODO: This needs to auto calculate depending on picture size. Probably by using the outer face (via align?) and subtracting
@@ -89,8 +93,12 @@ with BuildPart() as frame:
     
     connector_width = 10
     with BuildLine() as cline:
-        #Connect to the edge of the cross but move point 5 "inwards" to take care of slant.
-        l = Line((cross_conn_vtx.X-connector_width/2-2.5,cross_conn_vtx.Y+5), (edge_conn.X,edge_conn.Y))
+        if(horizontal_mounting):
+            #Connect to the edge of the cross but move point 5 "inwards" to take care of slant.
+            l = Line((cross_conn_vtx.X-connector_width/2-2.5,cross_conn_vtx.Y+5), (edge_conn.X,edge_conn.Y))
+        else:
+            conn_target_face = vmount_box.faces().sort_by(Axis.X)[-1]
+            l = Line((conn_target_face.center().X-8, conn_target_face.center().Y-10), (edge_conn.X,edge_conn.Y))
     #TODO: Fix this manual subtraction. shouldn't be necessary.
     with BuildSketch(Plane(origin=edge_face.center() - (0,0,1), z_dir=edge_face.normal_at())) as crect:
         r = Rectangle(connector_width, frame_height)
@@ -101,8 +109,10 @@ with BuildPart() as frame:
 
 
     with Locations(top_face):
-        Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,0))
-        Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,90))
+        if(horizontal_mounting):
+            Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,0))
+        if(vertical_mounting):
+            Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,90))
 
 
 
