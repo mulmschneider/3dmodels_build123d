@@ -9,17 +9,17 @@ picture_tolerance = 3
 picture_width += picture_tolerance
 picture_length += picture_tolerance
 
-horizontal_mounting = False
-vertical_mounting = True
+horizontal_mounting = True
+vertical_mounting = False
 
-edge_width = 27
-edge_length = 40
+edge_width = 40
+edge_length = 27
 edge_pts= [
     (0,0),
     (edge_length,0),
     (edge_length,edge_width),
- #   (edge_length-6,edge_width),
- #   (0,6),
+    #(edge_length-6,edge_width),
+    #(0,6),
     (0,0)
 ]
 
@@ -27,8 +27,10 @@ frame_height=5.5
 holding_height= 5
 holding_width = 6
 
+notch_remaining_holding_width = 1.5
+
 with BuildLine() as notch_line:
-        p = Polyline([(holding_width,0), (1.5,-holding_height), (holding_width, -holding_height), (holding_width,0)])
+        p = Polyline([(holding_width,0), (notch_remaining_holding_width,-holding_height), (holding_width, -holding_height), (holding_width,0)])
 
 with BuildPart() as edge:
     with BuildSketch() as edge_plate:
@@ -43,23 +45,41 @@ with BuildPart() as edge:
 
     long_face = edge.faces().sort_by(Axis.X)[-1]
     notch_start_edge = long_face.vertices().group_by(Axis.Z)[-1].sort_by(Axis.Y)[0]
-    long_face_plane = Plane(origin=notch_start_edge + (-6,0), x_dir=(0,1,0), z_dir=long_face.normal_at())
+    long_face_plane = Plane(origin=notch_start_edge + (-holding_width,0), x_dir=(0,1,0), z_dir=long_face.normal_at())
     
-    #TODO: strange thingy in the corner. Probably need to design a seperate shape (via intersect) 
-    # just for the corner that we subtract here?
     with BuildSketch(long_face_plane) as picture_notch:
         with BuildLine() as lfline:
             add(notch_line)
         make_face()
-    extrude(amount=-(edge_length-1.5), mode=Mode.SUBTRACT)
+    n1 = extrude(amount=-(edge_length), mode=Mode.SUBTRACT)
 
     short_face = edge.faces().sort_by(Axis.Y)[0]
-    short_face_plane = Plane(origin=notch_start_edge + (0,1.5), x_dir=(-1,0,0), z_dir=-short_face.normal_at())
+    short_face_plane = Plane(origin=notch_start_edge + (0,holding_width), x_dir=(-1,0,0), z_dir=-short_face.normal_at())
     with BuildSketch(short_face_plane) as picture_notch:
         with BuildLine() as sfline:
             add(notch_line)
         make_face()
-    extrude(amount=(edge_width-1.5), mode=Mode.SUBTRACT)
+    n2 = extrude(amount=(edge_width), mode=Mode.SUBTRACT)
+
+#TODO: Ugly code duplication from above - didn't know how to else combine the needed subtraction / intersection operations
+#      necessary to get a proper notch edge
+with BuildPart() as notch_edge:
+    long_face_plane = Plane(origin=notch_start_edge , x_dir=(0,1,0), z_dir=long_face.normal_at())
+    short_face_plane = Plane(origin=notch_start_edge, x_dir=(-1,0,0), z_dir=-short_face.normal_at())
+    with BuildSketch(long_face_plane) as picture_notch:
+        with BuildLine() as lfline:
+            add(notch_line)
+        make_face()
+    n1 = extrude(amount=-(edge_length), mode=Mode.ADD)
+    with BuildSketch(short_face_plane) as picture_notch:
+        with BuildLine() as sfline:
+            add(notch_line)
+        make_face()
+    n2 = extrude(amount=(edge_width), mode=Mode.INTERSECT)
+
+
+with edge:
+    add(notch_edge, mode=Mode.SUBTRACT)
     
   
 
@@ -88,14 +108,16 @@ with BuildPart() as frame:
         e2 = mirror(e, about=Plane.YZ)
         mirror(e2, about=Plane.XZ)
     #TODO: find the face properly, instead of selection magic 2
-    edge_face = e.faces().sort_by_distance((0,0))[0]
+    edge_face = e.faces().sort_by_distance((distance_to_edge_x/2,0,frame_height/2))[0]
     edge_conn = edge_face.center()
+    print(edge_conn)
+    print(frame_height)
     
     connector_width = 10
     with BuildLine() as cline:
         if(horizontal_mounting):
             #Connect to the edge of the cross but move point 5 "inwards" to take care of slant.
-            l = Line((cross_conn_vtx.X-connector_width/2-2.5,cross_conn_vtx.Y+5), (edge_conn.X,edge_conn.Y))
+            l = Line((cross_conn_vtx.X-connector_width/2-5,cross_conn_vtx.Y+5), (edge_conn.X,edge_conn.Y))
         else:
             conn_target_face = vmount_box.faces().sort_by(Axis.X)[-1]
             l = Line((conn_target_face.center().X-8, conn_target_face.center().Y-10), (edge_conn.X,edge_conn.Y))
