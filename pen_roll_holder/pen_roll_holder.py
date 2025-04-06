@@ -1,7 +1,7 @@
 from build123d import *
 from ocp_vscode import *
 
-base_length = 300
+base_length = 250
 base_width = 80
 base_height = 7
 
@@ -17,14 +17,16 @@ with BuildPart() as roll:
     top_face = roll.faces().sort_by(Axis.Z)[-1]
     bottom_face = roll.faces().sort_by(Axis.Z)[0]
     offset(amount=-roll_strength, openings=[top_face, bottom_face])
-    #TODO: chamfer / fillet the top edge, so that pens slide in easier
+    #Get new top_face
+    top_face = roll.faces().sort_by(Axis.Z)[-1]
+    chamfer(top_face.edges().sort_by_distance((0,0))[0], length= 2.0)
 
 
 with BuildPart() as holder:
     base = Box(base_length,base_width,base_height)
     fillet(base.edges().filter_by(Axis.Z), radius=5)
     with Locations(holder.faces().sort_by(Axis.Z)[-1]):
-        with GridLocations(roll_length+roll_spacing,0,7,1):
+        with GridLocations(roll_length+roll_spacing,0,6,1):
             add(roll)
 
 
