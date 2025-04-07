@@ -9,8 +9,8 @@ picture_tolerance = 3
 picture_width += picture_tolerance
 picture_length += picture_tolerance
 
-horizontal_mounting = True
-vertical_mounting = False
+horizontal_mounting = False
+vertical_mounting = True
 
 edge_width = 40
 edge_length = 27
@@ -120,7 +120,7 @@ with BuildPart() as frame:
             l = Line((cross_conn_vtx.X-connector_width/2-5,cross_conn_vtx.Y+5), (edge_conn.X,edge_conn.Y))
         else:
             conn_target_face = vmount_box.faces().sort_by(Axis.X)[-1]
-            l = Line((conn_target_face.center().X-8, conn_target_face.center().Y-10), (edge_conn.X,edge_conn.Y))
+            l = Line((conn_target_face.center().X-10, conn_target_face.center().Y+5), (edge_conn.X,edge_conn.Y))
     #TODO: Fix this manual subtraction. shouldn't be necessary.
     with BuildSketch(Plane(origin=edge_face.center() - (0,0,1), z_dir=edge_face.normal_at())) as crect:
         r = Rectangle(connector_width, frame_height)
@@ -131,10 +131,12 @@ with BuildPart() as frame:
 
 
     with Locations(top_face):
-        if(horizontal_mounting):
-            Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,0))
-        if(vertical_mounting):
-            Multiconnect(50, mode=Mode.SUBTRACT, rotation=(0,0,90))
+        with Locations((0,5,0)):
+            if(horizontal_mounting):
+                Multiconnect(47, mode=Mode.SUBTRACT, rotation=(0,0,0))
+            if(vertical_mounting):
+                Multiconnect(47, mode=Mode.SUBTRACT, rotation=(0,0,90))
+        
 
 
 
